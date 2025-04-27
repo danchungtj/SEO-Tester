@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DK's SEO Analysis Engine</title>
+    <style>
+        /* --- Reset & Base --- */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            background-color: #f8f9fa; /* Light grey background */
+            color: #343a40; /* Darker grey text */
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff; /* White container background */
+            padding: 30px 40px;
+            border-radius: 12px; /* More rounded corners */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); /* Softer shadow */
+            max-width: 850px;
+            width: 100%;
+            margin: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50; /* Dark blue/grey heading */
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        /* --- Input Area --- */
+        #input-area {
+            display: flex;
+            gap: 10px; /* Space between input and button */
+            margin-bottom: 30px;
+            align-items: center; /* Vertically align items */
+        }
+
+        #urlInput {
+            flex-grow: 1; /* Take available space */
+            padding: 12px 15px;
+            border: 1px solid #ced4da; /* Light grey border */
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #urlInput:focus {
+            outline: none;
+            border-color: #80bdff; /* Blue border on focus */
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Blue glow */
+        }
+
+        #analyzeButton {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Purple/blue gradient */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.3s ease;
+            box-shadow: 0 4px 10px rgba(118, 75, 162, 0.3); /* Shadow matching gradient */
+        }
+
+        #analyzeButton:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a3f91 100%);
+            box-shadow: 0 6px 12px rgba(118, 75, 162, 0.4);
+            transform: translateY(-1px);
+        }
+
+        #analyzeButton:active {
+             transform: translateY(0px);
+             box-shadow: 0 3px 8px rgba(118, 75, 162, 0.3);
+        }
+
+        #analyzeButton:disabled {
+            background: #adb5bd; /* Greyed out */
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* --- Results Area --- */
+        #results {
+            margin-top: 20px;
+            padding: 25px;
+            background-color: #f8f9fa; /* Slightly different background for results */
+            border: 1px solid #e9ecef; /* Very light border */
+            border-radius: 8px;
+            min-height: 100px; /* Ensure it has some height initially */
+        }
+
+        #results h2 {
+            margin-top: 0;
+            color: #495057; /* Slightly lighter heading */
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+            font-size: 1.5rem;
+        }
+
+         #results h3 {
+            margin-top: 25px;
+            margin-bottom: 10px;
+            color: #343a40;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #results p, #results ul {
+            margin-bottom: 10px;
+            color: #495057; /* Slightly lighter text */
+        }
+
+         #results ul {
+            padding-left: 25px;
+            list-style: none; /* Remove default bullets */
+         }
+          #results li {
+             margin-bottom: 8px;
+             position: relative;
+         }
+          #results li::before { /* Custom bullet */
+            content: '•';
+            color: #667eea; /* Accent color */
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1.2em; /* Adjust position */
+            font-size: 1.2em;
+            position: absolute;
+            top: -2px;
+          }
+
+         #results strong {
+            font-weight: 600;
+            color: #343a40;
+         }
+
+        /* --- Status Indicators --- */
+        .status-icon {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        .status-ok { color: #28a745; /* Green */ }
+        .status-warning { color: #fd7e14; /* Orange */ }
+        .status-error { color: #dc3545; /* Red */ }
+        .status-info { color: #17a2b8; /* Info blue */}
+
+        /* --- Overall Score --- */
+        .overall-score {
+            font-size: 1.6em;
+            font-weight: 600; /* Bold */
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+        }
+        .score-A { background-color: #d1f7e0; color: #0f5132; border-color: #a3cfbb; }
+        .score-B { background-color: #fff3cd; color: #664d03; border-color: #ffe69c; }
+        .score-C { background-color: #fff3cd; color: #664d03; border-color: #ffe69c; } /* Same as B for visual */
+        .score-D { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; }
+        .score-F { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; font-weight: 700;} /* Even bolder F */
+
+        /* --- Loader --- */
+        .loader-container {
+            text-align: center;
+            padding: 30px;
+        }
+        .loader {
+            border: 5px solid #e9ecef; /* Light grey */
+            border-top: 5px solid #667eea; /* Accent color */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px auto; /* Center and add space below */
+        }
+        .loader-container p {
+            color: #6c757d; /* Medium grey text */
+            font-size: 0.9rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            #input-area {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            #analyzeButton {
+                width: 100%;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .overall-score {
+                font-size: 1.4em;
+            }
+        }
+
+        /* --- Utility --- */
+         .muted {
+            color: #6c757d;
+            font-size: 0.9em;
+         }
+
+        /* --- New Styles for Recommendations Section --- */
+        .seo-recommendations {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #e9ecef;
+        }
+        .recommendations-content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .recommendations-content h4 {
+            color: #2c3e50;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .recommendations-content ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        .recommendations-content li {
+            margin-bottom: 8px;
+        }
+        .recommendations-content a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .recommendations-content a:hover {
+            text-decoration: underline;
+        }
+
+        .recommendation-category {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .recommendation-category h5 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .recommendation-category h6 {
+            color: #495057;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+        .recommendations-content ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        .recommendations-content li {
+            margin-bottom: 8px;
+        }
+        .recommendations-content a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .recommendations-content a:hover {
+            text-decoration: underline;
+        }
+        .issues li {
+            color: #dc3545;
+        }
+        .suggestions li {
+            color: #28a745;
+        }
+        .resources li {
+            color: #17a2b8;
+        }
+
+        /* --- Response Formatting and Cleaning --- */
+        .formatted-content {
+            line-height: 1.6;
+        }
+        .formatted-content h4 {
+            color: #2c3e50;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .formatted-content h5 {
+            color: #495057;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .formatted-content h6 {
+            color: #6c757d;
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+        .formatted-content p {
+            margin-bottom: 15px;
+        }
+        .formatted-content ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        .formatted-content li {
+            margin-bottom: 8px;
+        }
+        .formatted-content pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .formatted-content code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+        .formatted-content a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .formatted-content a:hover {
+            text-decoration: underline;
+        }
+        .emoji {
+            font-size: 1.2em;
+            margin: 0 2px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>DK's SEO Analysis Engine</h1>
+
+        <div id="input-area">
+            <input type="url" id="urlInput" placeholder="Enter website URL (e.g., https://example.com)" required>
+            <button id="analyzeButton">Analyze SEO</button>
+        </div>
+
+        <div id="results">
+            <p class="muted" style="text-align: center;">Enter a URL above and click "Analyze SEO" to see the results.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const CORS_PROXY_URL = 'https://api.allorigins.win/raw?url='; // CORS Proxy for fetching HTML
+        const API_KEY = 'sk-e0819703cff243a1881edad705d82ac2';
+        const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        const MODEL_NAME = 'deepseek-chat';
+        const API_TIMEOUT = 45000; // Increased timeout to 45 seconds for potentially long summaries
+
+        // --- Google PageSpeed Insights API Configuration ---
+        // WARNING: Storing API keys client-side is insecure for public applications.
+        // This is suitable for PERSONAL/LOCAL USE ONLY. Use a server-side proxy for public deployment.
+        const GOOGLE_PAGESPEED_API_KEY = 'AIzaSyDy7LhVsuZKimkhejjy54xUk47gvvmSeGo'; // Your Provided Key
+        const GOOGLE_PAGESPEED_API_ENDPOINT = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
+
+        // --- DOM Elements ---
+        const urlInput = document.getElementById('urlInput');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const resultsDiv = document.getElementById('results');
+
+        // --- Event Listener ---
+        analyzeButton.addEventListener('click', handleAnalysisRequest);
+
+        // --- Main Analysis Function ---
+        async function handleAnalysisRequest() {
+            const targetUrl = urlInput.value.trim();
+
+            if (!targetUrl) {
+                resultsDiv.innerHTML = '<p class="status-error" style="text-align: center;">Please enter a valid URL.</p>';
+                return;
+            }
+
+            try {
+                new URL(targetUrl);
+                if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                    throw new Error('URL must start with http:// or https://');
+                }
+            } catch (e) {
+                resultsDiv.innerHTML = `<p class="status-error" style="text-align: center;">Invalid URL format: ${e.message}. Please include http:// or https://.</p>`;
+                return;
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="loader-container">
+                    <div class="loader"></div>
+                    <p>Analyzing... Fetching content and running checks.</p>
+                </div>`;
+            analyzeButton.disabled = true;
+
+            let htmlContent = '';
+            let analysisResults = {};
+            let scoreInfo = { score: 0, grade: 'N/A' };
+            let fetchError = null;
+
+            try {
+                // 1. Fetch HTML Content via CORS Proxy
+                const proxyFetchUrl = `${CORS_PROXY_URL}${encodeURIComponent(targetUrl)}`;
+                console.log(`Fetching HTML via proxy: ${proxyFetchUrl}`);
+                const response = await fetch(proxyFetchUrl);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch HTML (${response.status} ${response.statusText}). The CORS proxy might be down or the target site blocked it.`);
+                }
+                htmlContent = await response.text();
+
+                // 2. Parse HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlContent, 'text/html');
+
+                // 3. Perform Client-Side HTML Analysis
+                const titleResult = analyzeTitle(doc);
+                const descriptionResult = analyzeDescription(doc);
+                const headingsResult = analyzeHeadings(doc);
+                const imagesResult = analyzeImages(doc);
+                const linksResult = analyzeLinks(doc, targetUrl);
+
+                // 4. Call Google PageSpeed Insights API
+                resultsDiv.innerHTML = `
+                <div class="loader-container">
+                    <div class="loader"></div>
+                    <p>Analyzing... Running PageSpeed Insights (Mobile)...</p>
+                </div>`; // Update status message
+                const pageSpeedResult = await checkPageSpeed(targetUrl);
+
+                analysisResults = {
+                    title: titleResult,
+                    description: descriptionResult,
+                    headings: headingsResult,
+                    images: imagesResult,
+                    links: linksResult,
+                    pageSpeed: pageSpeedResult,
+                    // Mobile friendliness check removed
+                };
+
+                // 5. Calculate Score
+                scoreInfo = calculateScore(analysisResults);
+
+                // 6. Get SEO Improvement Recommendations
+                resultsDiv.innerHTML = `
+                <div class="loader-container">
+                    <div class="loader"></div>
+                    <p>Analyzing... Generating SEO improvement recommendations...</p>
+                </div>`;
+                
+                const seoRecommendations = await getSEORecommendations(analysisResults, targetUrl);
+                analysisResults.seoRecommendations = seoRecommendations;
+
+            } catch (error) {
+                console.error("Analysis Error:", error);
+                fetchError = `An error occurred during analysis: ${error.message}. Check the console for more details.`;
+            } finally {
+                analyzeButton.disabled = false;
+                // 7. Display Results or Error
+                if (fetchError) {
+                    resultsDiv.innerHTML = `<p class="status-error" style="text-align: center;">${fetchError}</p>`;
+                } else {
+                    displayResults(analysisResults, scoreInfo, targetUrl);
+                }
+            }
+        }
+
+        // --- Helper Analysis Functions ---
+
+        function analyzeTitle(doc) {
+            const titleElement = doc.querySelector('title');
+            const titleText = titleElement ? titleElement.textContent.trim() : '';
+            const titleLength = titleText.length;
+            let status = 'error'; // Default to error if missing
+            let statusText = 'Missing';
+            let advice = 'Add a descriptive <title> tag.';
+            let icon = '✗';
+
+            if (titleElement && titleLength > 0) {
+                statusText = 'OK';
+                status = 'ok';
+                icon = '✓';
+                advice = `Length: ${titleLength} chars. (Ideal: 50-60)`;
+                if (titleLength < 10 || titleLength > 70) {
+                    statusText = 'Warning';
+                    status = 'warning';
+                    icon = '!';
+                    advice += ' Length is outside the optimal range.';
+                }
+            }
+            return { text: titleText, length: titleLength, status, statusText, icon, advice };
+        }
+
+        function analyzeDescription(doc) {
+            const metaElement = doc.querySelector('meta[name="description"]');
+            const descriptionText = metaElement ? metaElement.getAttribute('content')?.trim() || '' : '';
+            const descriptionLength = descriptionText.length;
+            let status = 'error';
+            let statusText = 'Missing';
+            let advice = 'Add a descriptive <meta name="description"> tag.';
+            let icon = '✗';
+
+            if (metaElement && descriptionLength > 0) {
+                statusText = 'OK';
+                status = 'ok';
+                icon = '✓';
+                advice = `Length: ${descriptionLength} chars. (Ideal: 120-158)`;
+                if (descriptionLength < 50 || descriptionLength > 160) {
+                    statusText = 'Warning';
+                    status = 'warning';
+                    icon = '!';
+                    advice += ' Length is outside the optimal range.';
+                }
+            } else if (metaElement && descriptionLength === 0) {
+                statusText = 'Warning';
+                status = 'warning';
+                icon = '!';
+                advice = 'Meta description tag exists but is empty.';
+            }
+            return { text: descriptionText, length: descriptionLength, status, statusText, icon, advice };
+        }
+
+        function analyzeHeadings(doc) {
+            const h1Tags = doc.querySelectorAll('h1');
+            const h2Tags = doc.querySelectorAll('h2');
+            const h3Tags = doc.querySelectorAll('h3');
+
+            const h1Count = h1Tags.length;
+            const firstH1Text = h1Count > 0 ? h1Tags[0].textContent.trim() : 'N/A';
+            let h1Status = 'error'; // default error
+            let h1StatusText = 'Missing';
+            let h1Icon = '✗';
+            let h1Advice = 'Add a single, relevant H1 tag.';
+
+            if (h1Count === 1) {
+                h1StatusText = 'OK';
+                h1Status = 'ok';
+                h1Icon = '✓';
+                h1Advice = 'Exactly one H1 found.';
+                 if (!firstH1Text) {
+                    h1StatusText = 'Warning';
+                    h1Status = 'warning';
+                    h1Icon = '!';
+                    h1Advice = 'H1 tag found, but it is empty.';
+                 }
+            } else if (h1Count > 1) {
+                h1StatusText = 'Warning';
+                h1Status = 'warning';
+                h1Icon = '!';
+                h1Advice = `Found ${h1Count} H1 tags. Ideally, use only one per page.`;
+            }
+
+            return {
+                h1Count,
+                firstH1Text,
+                h1Status,
+                h1StatusText,
+                h1Icon,
+                h1Advice,
+                h2Count: h2Tags.length,
+                h3Count: h3Tags.length
+            };
+        }
+
+        function analyzeImages(doc) {
+            const images = Array.from(doc.querySelectorAll('img')); // Convert NodeList to Array
+            const totalImages = images.length;
+            let imagesWithAlt = 0;
+            let imagesMissingAlt = 0;
+
+            images.forEach(img => {
+                const altText = img.getAttribute('alt');
+                // Consider empty string alt="" as present (for decorative images) but advise check
+                if (altText !== null) { // Check for presence of attribute first
+                     if(altText.trim() !== '') {
+                         imagesWithAlt++;
+                     } else {
+                         // Found alt="", count as present but potentially needs review
+                         imagesWithAlt++; // Count it towards "having alt" but flag in advice
+                     }
+                } else {
+                    imagesMissingAlt++;
+                }
+            });
+
+            const altPercentage = totalImages > 0 ? Math.round((imagesWithAlt / totalImages) * 100) : 100;
+            let status = 'ok';
+            let statusText = 'OK';
+            let icon = '✓';
+            let advice = 'Good, all images seem to have alt attributes.';
+
+            if (totalImages === 0) {
+                advice = 'No images found on the page.';
+                status = 'info'; // Not an error or warning if no images
+                statusText = 'Info';
+                icon = 'i';
+            } else if (imagesMissingAlt > 0) {
+                status = imagesMissingAlt > totalImages / 2 ? 'error' : 'warning';
+                statusText = status === 'error' ? 'Error' : 'Warning';
+                icon = status === 'error' ? '✗' : '!';
+                advice = `${imagesMissingAlt} out of ${totalImages} images are missing the alt attribute. Add descriptive alt text for important images.`;
+            } else {
+                 // Check if some alt texts were empty strings
+                 const emptyAltCount = totalImages - imagesMissingAlt - (images.filter(img => img.getAttribute('alt')?.trim() !== '').length);
+                 if (emptyAltCount > 0) {
+                      advice += ` (${emptyAltCount} image(s) have an empty alt="" attribute - ensure these are purely decorative.)`;
+                 }
+            }
+
+            return { totalImages, imagesWithAlt, imagesMissingAlt, altPercentage, status, statusText, icon, advice };
+        }
+
+        function analyzeLinks(doc, pageUrl) {
+            const links = doc.querySelectorAll('a[href]');
+            let internalLinks = 0;
+            let externalLinks = 0;
+            let problematicLinks = 0; // Renamed from brokenPotential
+            let baseOrigin = null;
+
+            try {
+                 baseOrigin = new URL(pageUrl).origin;
+            } catch (e) {
+                 console.error("Could not parse base URL for link analysis:", pageUrl);
+                 return { totalLinks: links.length, internalLinks: 'N/A', externalLinks: 'N/A', problematicLinks: links.length };
+            }
+
+            links.forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href || href.trim() === '' || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+                    problematicLinks++;
+                    return;
+                }
+
+                try {
+                    const absoluteUrl = new URL(href, pageUrl).href;
+                    const linkOrigin = new URL(absoluteUrl).origin;
+
+                    if (linkOrigin === baseOrigin) {
+                        internalLinks++;
+                    } else {
+                        externalLinks++;
+                    }
+                } catch (e) {
+                    console.warn(`Could not parse link URL: ${href}`, e);
+                    problematicLinks++; // Count unparseable URLs as problematic
+                }
+            });
+
+            let linkStatus = problematicLinks > 0 ? 'warning' : 'ok';
+            let linkIcon = problematicLinks > 0 ? '!' : '✓';
+
+            return { totalLinks: links.length, internalLinks, externalLinks, problematicLinks, linkStatus, linkIcon };
+        }
+
+        // --- Google PageSpeed Insights API Call ---
+        async function checkPageSpeed(url) {
+            const strategy = 'mobile'; // Focus on mobile speed, common for SEO
+            const apiFetchUrl = `${GOOGLE_PAGESPEED_API_ENDPOINT}?url=${encodeURIComponent(url)}&key=${GOOGLE_PAGESPEED_API_KEY}&strategy=${strategy}&category=PERFORMANCE`;
+
+            console.log(`Fetching PageSpeed Insights (${strategy}) from: ${GOOGLE_PAGESPEED_API_ENDPOINT}`);
+
+            try {
+                const response = await fetch(apiFetchUrl);
+                if (!response.ok) {
+                     // Try to get error message from Google's response
+                     let errorData;
+                     try { errorData = await response.json(); } catch (e) { /* Ignore if response is not JSON */ }
+                     const errorMessage = errorData?.error?.message || `HTTP error! status: ${response.status}`;
+                     throw new Error(`PageSpeed API Error: ${errorMessage}`);
+                }
+                const data = await response.json();
+
+                // Navigate the potentially complex response structure
+                const performanceCategory = data?.lighthouseResult?.categories?.performance;
+                if (performanceCategory && typeof performanceCategory.score === 'number') {
+                    const score = Math.round(performanceCategory.score * 100); // Score is 0-1, convert to 0-100
+                    let status = 'error';
+                    let icon = '✗';
+                    if (score >= 90) { status = 'ok'; icon = '✓'; }
+                    else if (score >= 50) { status = 'warning'; icon = '!'; }
+
+                    return { score: score, status: status, icon: icon, details: `Mobile Performance Score: ${score}/100` };
+                } else {
+                     console.warn("PageSpeed API response structure unexpected or missing performance score:", data);
+                     throw new Error("Could not extract performance score from PageSpeed API response.");
+                }
+
+            } catch (error) {
+                console.error('Page Speed API Fetch Error:', error);
+                return { score: 'Error', status: 'error', icon: '✗', details: `Failed to retrieve PageSpeed score: ${error.message}` };
+            }
+        }
+
+        // --- Scoring Logic ---
+        function calculateScore(results) {
+            let score = 0;
+            const maxScore = 100; // Target max score
+
+            // Title (Max 15)
+            if (results.title.status === 'ok') score += 15;
+            else if (results.title.status === 'warning') score += 5;
+
+            // Description (Max 15)
+            if (results.description.status === 'ok') score += 15;
+            else if (results.description.status === 'warning') score += 5;
+
+            // Headings (Max 20)
+            if (results.headings.h1Status === 'ok') score += 15;
+            else if (results.headings.h1Status === 'warning') score += 5; // Penalty for multiple or empty H1s
+            if (results.headings.h2Count > 0) score += 3; // Reward presence of H2s
+            if (results.headings.h3Count > 0) score += 2; // Reward presence of H3s
+
+            // Images (Max 15)
+            if (results.images.status === 'info') { // No images found
+                score += 5; // Small score, not penalized
+            } else if (results.images.status === 'ok') {
+                score += 15;
+            } else if (results.images.status === 'warning') {
+                score += 8; // Partial score for some missing alts
+            } // No points for 'error' status (many missing alts)
+
+            // Links (Max 5) - Simple check
+            if (results.links.linkStatus === 'ok') score += 5;
+            // Minor penalty if problematic links exist
+
+            // Page Speed (Max 30) - Using actual score
+            if (typeof results.pageSpeed.score === 'number') {
+                if (results.pageSpeed.score >= 90) score += 30;
+                else if (results.pageSpeed.score >= 50) score += 15;
+                else score += 5; // Small score even for poor performance
+            } // No points if score is 'Error'
+
+            // Ensure score is within 0-100 bounds
+            score = Math.max(0, Math.min(Math.round(score), maxScore));
+
+            // Determine Grade
+            let grade = 'F';
+            if (score >= 90) grade = 'A';
+            else if (score >= 75) grade = 'B';
+            else if (score >= 60) grade = 'C';
+            else if (score >= 50) grade = 'D';
+
+            return { score, grade };
+        }
+
+        // --- DeepSeek API Integration ---
+        async function getSEORecommendations(analysisResults, url) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+                const prompt = `As an SEO expert, analyze the following website data and provide extremely detailed, actionable recommendations. Include specific code examples, emojis for emphasis, and comprehensive explanations. Focus on specific improvements and include concrete examples. Do not include any suggestions for further discussion or conversational elements at the end - this is a final report output.
+
+Website Analysis Results:
+URL: ${url}
+
+1. Title Tag Analysis:
+- Status: ${analysisResults.title.statusText}
+- Current Title: "${analysisResults.title.text}"
+- Length: ${analysisResults.title.length} characters
+- Issue: ${analysisResults.title.advice}
+
+2. Meta Description Analysis:
+- Status: ${analysisResults.description.statusText}
+- Current Description: "${analysisResults.description.text}"
+- Length: ${analysisResults.description.length} characters
+- Issue: ${analysisResults.description.advice}
+
+3. Heading Structure:
+- H1 Count: ${analysisResults.headings.h1Count}
+- H2 Count: ${analysisResults.headings.h2Count}
+- H3 Count: ${analysisResults.headings.h3Count}
+- First H1 Content: "${analysisResults.headings.firstH1Text}"
+- Issue: ${analysisResults.headings.h1Advice}
+
+4. Image Optimization:
+- Total Images: ${analysisResults.images.totalImages}
+- Images with Alt Text: ${analysisResults.images.imagesWithAlt}
+- Images Missing Alt: ${analysisResults.images.imagesMissingAlt}
+- Alt Text Coverage: ${analysisResults.images.altPercentage}%
+- Issue: ${analysisResults.images.advice}
+
+5. Page Speed Performance:
+- Mobile Score: ${analysisResults.pageSpeed.score}/100
+- Status: ${analysisResults.pageSpeed.status}
+
+Please provide an extremely detailed report with:
+1. A comprehensive summary of key issues found (use emojis for emphasis)
+2. Specific, actionable recommendations for each issue (include code examples where relevant)
+3. Detailed examples of how to implement the improvements (with before/after comparisons)
+4. Links to relevant tools and resources (with descriptions)
+5. Priority order for implementing the changes (with impact scores)
+6. Estimated impact of each improvement (with specific metrics)
+
+Format the response in clear sections with proper HTML formatting for better readability. Use emojis, code blocks, and visual elements to enhance readability.`;
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: MODEL_NAME,
+                        messages: [
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 2000,
+                        top_p: 0.9,
+                        frequency_penalty: 0.5,
+                        presence_penalty: 0.5
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`DeepSeek API error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const rawContent = data.choices[0].message.content;
+                return formatAndCleanResponse(rawContent);
+            } catch (error) {
+                console.error("DeepSeek API Error:", error);
+                if (error.name === 'AbortError') {
+                    return "The API request timed out. Please try again with a simpler analysis.";
+                }
+                return "Could not generate SEO recommendations at this time. Please try again later.";
+            }
+        }
+
+        // --- Response Formatting and Cleaning ---
+        function formatAndCleanResponse(content) {
+            // First, preserve triple-backtick code blocks
+            const codeBlockRegex = /```([\s\S]*?)```/g;
+            const codeBlocks = [];
+            content = content.replace(codeBlockRegex, (match, code) => {
+                const index = codeBlocks.length;
+                codeBlocks.push(code.trim());
+                return `CODEBLOCK_${index}`;
+            });
+
+            // Handle language-tagged code examples (e.g., html:, apache\n, js (STRANDED TEXT))
+            // Looks for common language tags at the start of a line, optional colon or "(STRANDED TEXT)",
+            // captures everything until a likely end marker (double newline, emoji, ---, <, $)
+            const langTagRegex = /^(html|css|js|javascript|apache|xml|json|python)\s*(?::|\(STRANDED TEXT\))?\s*\n([\s\S]*?)(?=\n\n|\n[✅📝🔹🔄⭐]|\n---|\n<|$)/gm;
+            content = content.replace(langTagRegex, (match, lang, code) => {
+                // Avoid replacing if it's just the tag without significant code
+                if (code.trim().length < 1) return match; 
+                const index = codeBlocks.length;
+                codeBlocks.push(code.trim()); 
+                return `CODEBLOCK_${index}`; // Use the same placeholder system
+            });
+
+            // Remove only truly empty lines (lines with just > or whitespace)
+            content = content.replace(/^>+$\n/gm, '');
+            content = content.replace(/^\s*$\n/gm, '');
+
+            // Convert markdown-style headers to HTML
+            content = content.replace(/^# (.*$)/gm, '<h4>$1</h4>');
+            content = content.replace(/^## (.*$)/gm, '<h5>$1</h5>');
+            content = content.replace(/^### (.*$)/gm, '<h6>$1</h6>');
+
+            // Convert markdown lists to HTML, preserving indentation
+            content = content.replace(/^(\s*)[-*] (.*$)/gm, (match, indent, text) => {
+                const level = Math.floor(indent.length / 2);
+                // Basic sanitation for list items
+                text = text.replace(/</g, '&lt;').replace(/>/g, '&gt;'); 
+                return `<li class="level-${level}">${text}</li>`;
+            });
+            
+            // Group consecutive list items
+            content = content.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, '<ul>$&</ul>');
+
+            // Convert markdown links to HTML
+            content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+            // Handle before/after sections more carefully
+            content = content.replace(/🔄\s*Before:\s*\n([\s\S]*?)(?=🔄\s*After:|$)/g, 
+                (match, code) => {
+                    const index = codeBlocks.length;
+                    codeBlocks.push(code.trim());
+                    return `<div class="before-section"><h6>Before:</h6>CODEBLOCK_${index}</div>`;
+                });
+            content = content.replace(/🔄\s*After:\s*\n([\s\S]*?)(?=\*\*|\n\n|\n[✅📝🔹🔄⭐]|\n---|\n<|$)/g, 
+                 (match, code) => {
+                    const index = codeBlocks.length;
+                    codeBlocks.push(code.trim());
+                    return `<div class="after-section"><h6>After:</h6>CODEBLOCK_${index}</div>`;
+                });
+
+            // Convert emojis
+            content = content.replace(/[\u{1F300}-\u{1F9FF}]/gu, emoji => {
+                return `<span class="emoji">${emoji}</span>`;
+            });
+
+            // Restore ALL preserved code blocks (triple backtick and language-tagged)
+            content = content.replace(/CODEBLOCK_(\d+)/g, (match, index) => {
+                const code = codeBlocks[parseInt(index)];
+                // Escape HTML within the code block before rendering
+                const escapedCode = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                return `<pre><code>${escapedCode}</code></pre>`;
+            });
+
+            // Ensure proper spacing between sections
+            content = content.replace(/\n{3,}/g, '\n\n');
+
+            // Wrap the entire content in a div for styling
+            return `<div class="formatted-content">${content}</div>`;
+        }
+
+        // Update styles for better code block and before/after section display
+        const style = document.createElement('style');
+        style.textContent = `
+            .formatted-content {
+                line-height: 1.6;
+            }
+            .formatted-content h4 {
+                color: #2c3e50;
+                margin-top: 20px;
+                margin-bottom: 10px;
+                font-size: 1.2em;
+            }
+            .formatted-content h5 {
+                color: #495057;
+                margin-top: 15px;
+                margin-bottom: 10px;
+                font-size: 1.1em;
+            }
+            .formatted-content h6 {
+                color: #6c757d;
+                margin-top: 12px;
+                margin-bottom: 8px;
+                font-size: 1em;
+            }
+            .formatted-content p {
+                margin-bottom: 15px;
+            }
+            .formatted-content ul {
+                padding-left: 20px;
+                margin-bottom: 15px;
+            }
+            .formatted-content li {
+                margin-bottom: 8px;
+            }
+            .formatted-content li.level-1 {
+                padding-left: 20px;
+            }
+            .formatted-content li.level-2 {
+                padding-left: 40px;
+            }
+            .formatted-content pre {
+                background-color: #f8f9fa;
+                padding: 15px;
+                border-radius: 6px;
+                overflow-x: auto;
+                margin: 15px 0;
+                white-space: pre-wrap;
+            }
+            .formatted-content code {
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 0.9em;
+                white-space: pre-wrap;
+                display: block;
+            }
+            .formatted-content a {
+                color: #667eea;
+                text-decoration: none;
+            }
+            .formatted-content a:hover {
+                text-decoration: underline;
+            }
+            .emoji {
+                font-size: 1.2em;
+                margin: 0 2px;
+            }
+            .before-section, .after-section {
+                margin: 15px 0;
+                padding: 10px;
+                background-color: #f8f9fa;
+                border-radius: 6px;
+            }
+            .before-section h6, .after-section h6 {
+                color: #495057;
+                margin-bottom: 8px;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // --- Display Results ---
+        function displayResults(results, scoreInfo, url) {
+            let html = `<h2>Analysis Results for: <span class="status-info">${url}</span></h2>`;
+
+             html += `<div class="overall-score score-${scoreInfo.grade}">Overall Score: ${scoreInfo.score} / 100 (Grade: ${scoreInfo.grade})</div>`;
+
+             // Helper to create consistent result blocks
+             const createResultBlock = (title, result) => `
+                <p>
+                    <span class="status-icon status-${result.status}">${result.icon}</span>
+                    <strong>${result.statusText}:</strong> ${result.advice}
+                </p>
+                ${result.text ? `<p><span class="muted">Content:</span> ${escapeHtml(result.text.substring(0, 150))}${result.text.length > 150 ? '...' : ''}</p>` : ''}
+             `;
+
+             // Title
+            html += `<h3>Page Title</h3>`;
+            html += createResultBlock('Title', results.title);
+
+            // Description
+            html += `<h3>Meta Description</h3>`;
+            html += createResultBlock('Description', results.description);
+
+            // Headings
+            html += `<h3>Headings Structure</h3>`;
+            html += `<p><span class="status-icon status-${results.headings.h1Status}">${results.headings.h1Icon}</span> <strong>H1 Status: ${results.headings.h1StatusText}</strong></p>`;
+            html += `<p><strong>H1 Count:</strong> ${results.headings.h1Count}. ${results.headings.h1Advice}</p>`;
+            if (results.headings.h1Count > 0) {
+                html += `<p><span class="muted">First H1 Text:</span> ${escapeHtml(results.headings.firstH1Text) || '<em>(Empty)</em>'}</p>`;
+            }
+            html += `<ul><li><strong>H2 Count:</strong> ${results.headings.h2Count}</li>`;
+            html += `<li><strong>H3 Count:</strong> ${results.headings.h3Count}</li></ul>`;
+
+            // Images
+            html += `<h3>Image Alt Tags</h3>`;
+            html += `<p><span class="status-icon status-${results.images.status}">${results.images.icon}</span> <strong>Status: ${results.images.statusText}</strong></p>`;
+            html += `<ul><li><strong>Total Images:</strong> ${results.images.totalImages}</li>`;
+             if (results.images.totalImages > 0) {
+                html += `<li><strong>Images with Alt:</strong> ${results.images.imagesWithAlt} (${results.images.altPercentage}%)</li>`;
+                html += `<li><strong>Images Missing Alt:</strong> ${results.images.imagesMissingAlt}</li>`;
+            }
+            html += `</ul><p><span class="muted">Advice:</span> ${results.images.advice}</p>`;
+
+
+            // Links
+            html += `<h3>Link Analysis</h3>`;
+             html += `<p><span class="status-icon status-${results.links.linkStatus}">${results.links.linkIcon}</span> <strong>Link Health (Basic Check)</strong></p>`;
+            html += `<ul><li><strong>Total Links Found:</strong> ${results.links.totalLinks}</li>`;
+            html += `<li><strong>Internal Links:</strong> ${results.links.internalLinks}</li>`;
+            html += `<li><strong>External Links:</strong> ${results.links.externalLinks}</li>`;
+            html += `<li><strong>Problematic Links (Empty, #, mailto:, etc.):</strong> ${results.links.problematicLinks}</li></ul>`;
+            if (results.links.problematicLinks > 0) {
+                html += `<p class="muted">Note: Problematic links might need manual review.</p>`;
+            }
+
+
+            // Page Speed Insights (Now with real data)
+            html += `<h3>Page Speed Insights (Mobile)</h3>`;
+             html += `<p><span class="status-icon status-${results.pageSpeed.status}">${results.pageSpeed.icon}</span> <strong>Score: ${results.pageSpeed.score}/100</strong></p>`;
+            html += `<p><span class="muted">Details:</span> ${results.pageSpeed.details}</p>`;
+            if(typeof results.pageSpeed.score === 'number') {
+                 html += `<p class="muted">Score ranges: 0-49 (Poor), 50-89 (Needs Improvement), 90-100 (Good)</p>`;
+                 html += `<p><a href="https://pagespeed.web.dev/report?url=${encodeURIComponent(url)}" target="_blank" rel="noopener noreferrer">View full report on PageSpeed Insights</a></p>`;
+            } else {
+                html += `<p class="status-error">Could not retrieve PageSpeed score.</p>`
+            }
+
+            // Add SEO Recommendations Section
+            html += `<h3>SEO Improvement Recommendations</h3>`;
+            html += `<div class="seo-recommendations">`;
+            html += results.seoRecommendations ? 
+                `<div class="recommendations-content">${results.seoRecommendations}</div>` :
+                `<p class="status-warning">Could not generate SEO recommendations at this time.</p>`;
+            html += `</div>`;
+
+            resultsDiv.innerHTML = html;
+        }
+
+         // Utility function to escape HTML for safe display
+         function escapeHtml(unsafe) {
+             if (!unsafe) return '';
+             return unsafe
+                  .replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#039;");
+         }
+
+    </script>
+
+</body>
+</html>
